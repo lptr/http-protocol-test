@@ -40,11 +40,12 @@ public class HttpBenchmark {
     ImmutableList<URI> cacheUrls;
 
     HttpRequester simple = new SimpleHttpClientRequester();
+    HttpRequester threadPool = new ThreadPoolSimpleHttpClientRequester();
     HttpRequester async = new AsyncHttpClientRequester();
     HttpRequester pipelining4 = new PipeliningHttpClient4Requester(root);
     HttpRequester pipelining5 = new PipeliningHttpClient5Requester(root);
 
-    final List<HttpRequester> requesters = ImmutableList.of(simple, async, pipelining4, pipelining5);
+    final List<HttpRequester> requesters = ImmutableList.of(simple, threadPool, async, pipelining4, pipelining5);
 
     @Setup(Level.Trial)
     public void setupTrial() throws IOException {
@@ -67,6 +68,11 @@ public class HttpBenchmark {
     }
 
     @Benchmark
+    public void threadPoolHttpClient(Blackhole blackhole) throws Exception {
+        threadPool.request(cacheUrls, blackhole);
+    }
+
+    @Benchmark
     public void asyncHttpClient4(Blackhole blackhole) throws Exception {
         async.request(cacheUrls, blackhole);
     }
@@ -85,7 +91,7 @@ public class HttpBenchmark {
         HttpBenchmark benchmark = new HttpBenchmark();
         benchmark.setupTrial();
         try {
-            benchmark.pipeliningHttpClient4(new Blackhole("Today's password is swordfish. I understand instantiating Blackholes directly is dangerous."));
+            benchmark.threadPoolHttpClient(new Blackhole("Today's password is swordfish. I understand instantiating Blackholes directly is dangerous."));
         } finally {
             benchmark.tearDown();
         }

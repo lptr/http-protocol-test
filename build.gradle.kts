@@ -47,4 +47,6 @@ dependencies {
     jmhImplementation("org.apache.httpcomponents:httpasyncclient:4.1.5")
 
     jmhImplementation("org.apache.httpcomponents.client5:httpclient5:5.2.1")
+
+    jmhRuntimeOnly("org.slf4j:slf4j-simple:2.0.7")
 }
