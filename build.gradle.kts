@@ -41,6 +41,8 @@ dependencies {
     // This dependency is used by the application.
     jmhImplementation("com.google.guava:guava:31.1-jre")
 
+    jmhImplementation("commons-io:commons-io:2.13.0")
+
     jmhImplementation("org.apache.httpcomponents:httpclient:4.5.14")
     jmhImplementation("org.apache.httpcomponents:httpasyncclient:4.1.5")
 }

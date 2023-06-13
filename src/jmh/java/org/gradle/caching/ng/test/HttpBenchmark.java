@@ -1,19 +1,16 @@
 package org.gradle.caching.ng.test;
 
 
-import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Fork;
-import org.openjdk.jmh.annotations.Measurement;
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.Warmup;
-import org.openjdk.jmh.infra.Blackhole;
+import com.google.common.collect.*;
+import com.google.common.io.*;
+import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.infra.*;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Optional;
-
-import static java.util.concurrent.TimeUnit.SECONDS;
+import java.io.*;
+import java.net.*;
+import java.nio.charset.*;
+import java.util.*;
+import java.util.concurrent.*;
 
 /*
  * Benchmark                     Mode  Cnt          Score         Error  Units
@@ -21,38 +18,49 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * OptionalBenchmark.optional   thrpt   20   86746312.090 ± 1150860.296  ops/s
  **/
 @Fork(1)
-@Warmup(iterations = 2, time = 1, timeUnit = SECONDS)
-@Measurement(iterations = 2, time = 1, timeUnit = SECONDS)
+@Warmup(iterations = 0)
+@Measurement(iterations = 1, batchSize = 1, time = 1, timeUnit = TimeUnit.SECONDS)
 @State(Scope.Benchmark)
+@BenchmarkMode(Mode.AverageTime)
 public class HttpBenchmark {
 
-    final Path path = Paths.get(".");
-    final Path pathRoot = Paths.get(".").toAbsolutePath().getRoot();
+    final URI root = URI.create("https://eu-build-cache.gradle.org/cache/");
+    ImmutableList<URI> cacheUrls;
 
+    HttpRequester simple = new SimpleHttpClientRequester();
+    HttpRequester async = new AsyncHttpClientRequester();
+    HttpRequester pipelining = new PipeliningHttpClientRequester();
+
+    final List<HttpRequester> requesters = ImmutableList.of(simple, async, pipelining);
+
+    @Setup(Level.Trial)
+    public void setupTrial() throws IOException {
+        this.cacheUrls = Resources.asCharSource(Objects.requireNonNull(getClass().getResource("/cache-ids.txt")), StandardCharsets.UTF_8).readLines().stream()
+            .map(id -> root.resolve("./" + id))
+            .collect(ImmutableList.toImmutableList())
+            .subList(0, 10);
+    }
+
+    @TearDown
+    @SuppressWarnings("UnstableApiUsage")
+    public void tearDown() throws IOException {
+        Closer closer = Closer.create();
+        requesters.forEach(closer::register);
+        closer.close();
+    }
+
+//    @Benchmark
+//    public void simpleHttpClient(Blackhole blackhole) throws Exception {
+//        simple.request(cacheUrls, blackhole);
+//    }
+//
+//    @Benchmark
+//    public void asyncHttpClient(Blackhole blackhole) throws Exception {
+//        async.request(cacheUrls, blackhole);
+//    }
+//
     @Benchmark
-    public void nullCheck(Blackhole bh) {
-        bh.consume(nullCheck(path));
-        bh.consume(nullCheck(pathRoot));
-    }
-
-    private static Object nullCheck(Path path) {
-        Path fileName = path.getFileName();
-        if (fileName != null) {
-            return fileName.toString();
-        } else {
-            return "";
-        }
-    }
-
-    @Benchmark
-    public void optional(Blackhole bh) {
-        bh.consume(optional(path));
-        bh.consume(optional(pathRoot));
-    }
-
-    private static Object optional(Path path) {
-        return Optional.ofNullable(path.getFileName())
-            .map(Object::toString)
-            .orElse("");
+    public void pipeliningHttpClient(Blackhole blackhole) throws Exception {
+        pipelining.request(cacheUrls, blackhole);
     }
 }
