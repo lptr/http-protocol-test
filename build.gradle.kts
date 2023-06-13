@@ -45,4 +45,6 @@ dependencies {
 
     jmhImplementation("org.apache.httpcomponents:httpclient:4.5.14")
     jmhImplementation("org.apache.httpcomponents:httpasyncclient:4.1.5")
+
+    jmhImplementation("org.apache.httpcomponents.client5:httpclient5:5.2.1")
 }

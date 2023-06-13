@@ -1,17 +1,20 @@
 package org.gradle.caching.ng.test;
 
-import org.apache.commons.io.*;
-import org.apache.http.*;
-import org.apache.http.client.methods.*;
-import org.apache.http.impl.client.*;
-import org.openjdk.jmh.infra.*;
-import org.openjdk.jmh.util.*;
+import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpHeaders;
+import org.apache.http.StatusLine;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.util.NullOutputStream;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import java.io.IOException;
+import java.net.URI;
+import java.util.List;
 
-public class SimpleHttpClientRequester implements HttpRequester, Closeable {
+public class SimpleHttpClientRequester extends AbstractHttpRequester {
     private final CloseableHttpClient httpClient;
 
     public SimpleHttpClientRequester() {
@@ -19,8 +22,7 @@ public class SimpleHttpClientRequester implements HttpRequester, Closeable {
     }
 
     @Override
-    public void request(List<URI> urls, Blackhole blackhole) throws Exception {
-        int counter = 0;
+    protected void doRequest(List<URI> urls, Blackhole blackhole, Recorder recorder) throws Exception {
         for (URI uri : urls) {
             HttpGet httpGet = new HttpGet(uri);
             httpGet.addHeader(HttpHeaders.ACCEPT, "*/*");
@@ -29,8 +31,9 @@ public class SimpleHttpClientRequester implements HttpRequester, Closeable {
                 StatusLine statusLine = response.getStatusLine();
                 int statusCode = statusLine.getStatusCode();
                 if (statusCode == 200) {
-                    System.out.printf("%s (%d / %d)%n", uri.getPath(), ++counter, urls.size());
+                    System.out.println("GET " + uri.getPath() + " + " + statusLine);
                     IOUtils.copyLarge(response.getEntity().getContent(), NullOutputStream.nullOutputStream(), ThreadLocalBuffer.getBuffer());
+                    recorder.recordReceived(response.getEntity().getContentLength());
                 } else {
                     throw new RuntimeException(String.format("Received status code %d for URL %s", statusCode, uri));
                 }
