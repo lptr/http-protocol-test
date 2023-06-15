@@ -16,6 +16,7 @@ public abstract class AbstractHttpRequester implements HttpRequester {
         doRequest(urls, blackhole, new Recorder() {
             @Override
             public void recordReceived(long bytes) {
+                System.out.printf("Received %d bytes on thread %s%n", bytes, Thread.currentThread().getName());
                 totalCount.incrementAndGet();
                 totalSize.addAndGet(bytes);
             }

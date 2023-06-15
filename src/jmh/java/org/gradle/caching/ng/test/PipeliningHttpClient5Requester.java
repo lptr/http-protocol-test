@@ -55,8 +55,6 @@ public class PipeliningHttpClient5Requester extends AbstractHttpRequester {
                     @Override
                     public void completed(final SimpleHttpResponse response) {
                         try {
-                            System.out.printf("%s -> %s (thread: %s)%n", request, new StatusLine(response), Thread.currentThread().getName());
-                            System.out.println(response.getBody());
                             recorder.recordReceived(response.getBody().getBodyBytes().length);
                         } finally {
                             latch.countDown();
