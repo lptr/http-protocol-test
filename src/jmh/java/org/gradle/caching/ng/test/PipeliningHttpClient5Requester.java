@@ -17,6 +17,7 @@ import org.apache.hc.core5.http2.config.H2Config;
 import org.apache.hc.core5.reactor.IOReactorConfig;
 import org.openjdk.jmh.infra.Blackhole;
 
+import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -56,7 +57,7 @@ public class PipeliningHttpClient5Requester extends AbstractHttpRequester {
                     @Override
                     public void completed(final SimpleHttpResponse response) {
                         try {
-                            recorder.recordReceived(response.getBody().getBodyBytes().length);
+                            recorder.recordReceived(() -> new ByteArrayInputStream(response.getBody().getBodyBytes()));
                         } finally {
                             latch.countDown();
                         }

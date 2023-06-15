@@ -1,6 +1,5 @@
 package org.gradle.caching.ng.test;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -8,7 +7,6 @@ import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
 import org.openjdk.jmh.infra.Blackhole;
-import org.openjdk.jmh.util.NullOutputStream;
 
 import java.io.IOException;
 import java.net.URI;
@@ -36,12 +34,8 @@ public class AsyncHttpClient4Requester extends AbstractHttpRequester {
             httpClient.execute(httpGet, new FutureCallback<>() {
                 @Override
                 public void completed(HttpResponse response) {
-                    System.out.println(uri.getPath());
                     try {
-                        IOUtils.copyLarge(response.getEntity().getContent(), NullOutputStream.nullOutputStream(), ThreadLocalBuffer.getBuffer());
-                        recorder.recordReceived(response.getEntity().getContentLength());
-                    } catch (IOException ex) {
-                        throw new RuntimeException(String.format("Couldn't fetch URL %s", uri), ex);
+                        recorder.recordReceived(response.getEntity()::getContent);
                     } finally {
                         counter.countDown();
                     }

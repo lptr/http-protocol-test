@@ -10,6 +10,9 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.entity.ContentType;
 import org.apache.http.impl.nio.client.CloseableHttpPipeliningClient;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
+import org.apache.http.impl.nio.conn.PoolingNHttpClientConnectionManager;
+import org.apache.http.impl.nio.reactor.DefaultConnectingIOReactor;
+import org.apache.http.impl.nio.reactor.IOReactorConfig;
 import org.apache.http.nio.ContentDecoder;
 import org.apache.http.nio.IOControl;
 import org.apache.http.nio.entity.ContentBufferEntity;
@@ -17,6 +20,7 @@ import org.apache.http.nio.protocol.AbstractAsyncResponseConsumer;
 import org.apache.http.nio.protocol.BasicAsyncRequestProducer;
 import org.apache.http.nio.protocol.HttpAsyncRequestProducer;
 import org.apache.http.nio.protocol.HttpAsyncResponseConsumer;
+import org.apache.http.nio.reactor.IOReactorException;
 import org.apache.http.nio.util.HeapByteBufferAllocator;
 import org.apache.http.nio.util.SimpleInputBuffer;
 import org.apache.http.protocol.HttpContext;
@@ -34,7 +38,15 @@ public class PipeliningHttpClient4Requester extends AbstractHttpRequester {
     private final HttpHost httpHost;
 
     public PipeliningHttpClient4Requester(URI root) {
-        this.httpClient = HttpAsyncClients.createPipelining();
+        try {
+            this.httpClient = HttpAsyncClients.createPipelining(
+                new PoolingNHttpClientConnectionManager(
+                    new DefaultConnectingIOReactor(
+                        IOReactorConfig.DEFAULT,
+                        new CounterThreadFactory())));
+        } catch (IOReactorException e) {
+            throw new RuntimeException(e);
+        }
         this.httpClient.start();
         this.httpHost = new HttpHost(root.getHost(), root.getPort(), root.getScheme());
     }
@@ -90,7 +102,6 @@ public class PipeliningHttpClient4Requester extends AbstractHttpRequester {
         protected void onEntityEnclosed(
             final HttpEntity entity, final ContentType contentType) throws IOException {
             long len = entity.getContentLength();
-            recorder.recordReceived(len);
             if (len > Integer.MAX_VALUE) {
                 throw new ContentTooLongException("Entity content is too long: %,d", len);
             }
@@ -111,6 +122,9 @@ public class PipeliningHttpClient4Requester extends AbstractHttpRequester {
 
         @Override
         protected void releaseResources() {
+            if (response != null) {
+                recorder.recordReceived(response.getEntity()::getContent);
+            }
             this.response = null;
             this.buf = null;
             counter.countDown();

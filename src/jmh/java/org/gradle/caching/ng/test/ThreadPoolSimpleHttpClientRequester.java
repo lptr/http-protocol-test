@@ -1,6 +1,5 @@
 package org.gradle.caching.ng.test;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpHeaders;
 import org.apache.http.StatusLine;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -8,7 +7,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.openjdk.jmh.infra.Blackhole;
-import org.openjdk.jmh.util.NullOutputStream;
 
 import java.io.IOException;
 import java.net.URI;
@@ -38,15 +36,14 @@ public class ThreadPoolSimpleHttpClientRequester extends AbstractHttpRequester {
                 return httpGet;
             })
             .forEach(httpGet ->
-                CompletableFuture.supplyAsync(() -> {
+                CompletableFuture.runAsync(() -> {
                         System.out.printf("Requesting %s%n", httpGet.getRequestLine().getUri());
                         try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
                             StatusLine statusLine = response.getStatusLine();
                             String uri = httpGet.getRequestLine().getUri();
                             int statusCode = statusLine.getStatusCode();
                             if (statusCode == 200) {
-                                IOUtils.copyLarge(response.getEntity().getContent(), NullOutputStream.nullOutputStream(), ThreadLocalBuffer.getBuffer());
-                                return response.getEntity().getContentLength();
+                                recorder.recordReceived(response.getEntity()::getContent);
                             } else {
                                 throw new RuntimeException(String.format("Received status code %d for URL %s", statusCode, uri));
                             }
@@ -56,7 +53,6 @@ public class ThreadPoolSimpleHttpClientRequester extends AbstractHttpRequester {
                             counter.countDown();
                         }
                     }, executor)
-                    .thenAccept(recorder::recordReceived)
             );
         counter.await();
     }

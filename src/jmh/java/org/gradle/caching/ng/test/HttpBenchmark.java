@@ -94,7 +94,7 @@ public class HttpBenchmark {
     public static void main(String[] args) throws Exception {
         HttpBenchmark benchmark = new HttpBenchmark();
         benchmark.setupTrial();
-        HttpRequester requester = benchmark.async;
+        HttpRequester requester = benchmark.pipelining4;
         System.out.println("Benchmark: " + requester.getClass().getSimpleName());
         long start = System.currentTimeMillis();
         try {
