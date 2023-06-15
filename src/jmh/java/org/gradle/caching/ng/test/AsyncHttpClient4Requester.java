@@ -14,25 +14,13 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class AsyncHttpClient4Requester extends AbstractHttpRequester {
     private final CloseableHttpAsyncClient httpClient;
 
     public AsyncHttpClient4Requester() {
         this.httpClient = HttpAsyncClients.custom()
-            .setThreadFactory(new ThreadFactory() {
-                private AtomicInteger count = new AtomicInteger(0);
-
-                @Override
-                public Thread newThread(Runnable r) {
-                    String name = "Dispatcher " + count.getAndIncrement();
-                    System.out.println(">>> Starting thread: " + name);
-                    return new Thread(r, name);
-                }
-            })
-            .setMaxConnTotal(100)
+            .setThreadFactory(new CounterThreadFactory())
             .setMaxConnPerRoute(100)
             .build();
         this.httpClient.start();

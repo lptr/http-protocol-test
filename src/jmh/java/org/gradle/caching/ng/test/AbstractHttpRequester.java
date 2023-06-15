@@ -4,6 +4,8 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.net.URI;
 import java.util.List;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class AbstractHttpRequester implements HttpRequester {
@@ -25,5 +27,16 @@ public abstract class AbstractHttpRequester implements HttpRequester {
 
     protected interface Recorder {
         void recordReceived(long bytes);
+    }
+
+    public static class CounterThreadFactory implements ThreadFactory {
+        private AtomicInteger count = new AtomicInteger(0);
+
+        @Override
+        public Thread newThread(Runnable r) {
+            String name = "Dispatcher " + count.getAndIncrement();
+            System.out.println(">>> Starting thread: " + name);
+            return new Thread(r, name);
+        }
     }
 }
