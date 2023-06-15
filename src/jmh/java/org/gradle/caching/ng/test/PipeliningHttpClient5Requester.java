@@ -11,7 +11,6 @@ import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManagerBu
 import org.apache.hc.core5.concurrent.FutureCallback;
 import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.config.Http1Config;
-import org.apache.hc.core5.http.message.StatusLine;
 import org.apache.hc.core5.http.nio.AsyncClientEndpoint;
 import org.apache.hc.core5.http2.HttpVersionPolicy;
 import org.apache.hc.core5.http2.config.H2Config;
@@ -37,6 +36,7 @@ public class PipeliningHttpClient5Requester extends AbstractHttpRequester {
                     TlsConfig.custom()
                         .setVersionPolicy(HttpVersionPolicy.FORCE_HTTP_1)
                         .build())
+                .setMaxConnPerRoute(1024)
                 .build());
         this.httpClient.start();
     }

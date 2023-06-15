@@ -21,7 +21,7 @@ public class AsyncHttpClient4Requester extends AbstractHttpRequester {
     public AsyncHttpClient4Requester() {
         this.httpClient = HttpAsyncClients.custom()
             .setThreadFactory(new CounterThreadFactory())
-            .setMaxConnPerRoute(100)
+            .setMaxConnPerRoute(1024)
             .build();
         this.httpClient.start();
     }
