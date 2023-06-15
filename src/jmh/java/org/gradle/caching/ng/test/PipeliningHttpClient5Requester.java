@@ -54,22 +54,31 @@ public class PipeliningHttpClient5Requester extends AbstractHttpRequester {
 
                     @Override
                     public void completed(final SimpleHttpResponse response) {
-                        System.out.println(request + " -> " + new StatusLine(response));
-                        System.out.println(response.getBody());
-                        recorder.recordReceived(response.getBody().getBodyBytes().length);
-                        latch.countDown();
+                        try {
+                            System.out.printf("%s -> %s (thread: %s)%n", request, new StatusLine(response), Thread.currentThread().getName());
+                            System.out.println(response.getBody());
+                            recorder.recordReceived(response.getBody().getBodyBytes().length);
+                        } finally {
+                            latch.countDown();
+                        }
                     }
 
                     @Override
                     public void failed(final Exception ex) {
-                        latch.countDown();
-                        System.out.println(request + "->" + ex);
+                        try {
+                            System.out.println(request + "->" + ex);
+                        } finally {
+                            latch.countDown();
+                        }
                     }
 
                     @Override
                     public void cancelled() {
-                        latch.countDown();
-                        System.out.println(request + " cancelled");
+                        try {
+                            System.out.println(request + " cancelled");
+                        } finally {
+                            latch.countDown();
+                        }
                     }
                 });
             }

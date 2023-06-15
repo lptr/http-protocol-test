@@ -41,7 +41,7 @@ public class HttpBenchmark {
 
     HttpRequester simple = new SimpleHttpClientRequester();
     HttpRequester threadPool = new ThreadPoolSimpleHttpClientRequester();
-    HttpRequester async = new AsyncHttpClientRequester();
+    HttpRequester async = new AsyncHttpClient4Requester();
     HttpRequester pipelining4 = new PipeliningHttpClient4Requester(root);
     HttpRequester pipelining5 = new PipeliningHttpClient5Requester(root);
 
@@ -64,36 +64,46 @@ public class HttpBenchmark {
 
     @Benchmark
     public void simpleHttpClient(Blackhole blackhole) throws Exception {
-        simple.request(cacheUrls, blackhole);
+        benchmark(simple, blackhole);
     }
 
     @Benchmark
     public void threadPoolHttpClient(Blackhole blackhole) throws Exception {
-        threadPool.request(cacheUrls, blackhole);
+        benchmark(threadPool, blackhole);
     }
 
     @Benchmark
     public void asyncHttpClient4(Blackhole blackhole) throws Exception {
-        async.request(cacheUrls, blackhole);
+        benchmark(async, blackhole);
     }
 
     @Benchmark
     public void pipeliningHttpClient4(Blackhole blackhole) throws Exception {
-        pipelining4.request(cacheUrls, blackhole);
+        benchmark(pipelining4, blackhole);
     }
 
     @Benchmark
     public void pipeliningHttpClient5(Blackhole blackhole) throws Exception {
-        pipelining5.request(cacheUrls, blackhole);
+        benchmark(pipelining5, blackhole);
+    }
+
+    private void benchmark(HttpRequester requester, Blackhole blackhole) throws Exception {
+        requester.request(cacheUrls, blackhole);
     }
 
     public static void main(String[] args) throws Exception {
         HttpBenchmark benchmark = new HttpBenchmark();
         benchmark.setupTrial();
+        HttpRequester requester = benchmark.async;
+        System.out.println("Benchmark: " + requester.getClass().getSimpleName());
+        long start = System.currentTimeMillis();
         try {
-            benchmark.threadPoolHttpClient(new Blackhole("Today's password is swordfish. I understand instantiating Blackholes directly is dangerous."));
+            Blackhole blackhole = new Blackhole("Today's password is swordfish. I understand instantiating Blackholes directly is dangerous.");
+            benchmark.benchmark(requester, blackhole);
         } finally {
             benchmark.tearDown();
         }
+        long end = System.currentTimeMillis();
+        System.out.printf("Benchmark '%s' finished in %f s%n", requester.getClass().getSimpleName(), (end - start) / 1000d);
     }
 }
