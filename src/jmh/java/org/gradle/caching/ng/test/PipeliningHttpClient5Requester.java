@@ -48,6 +48,7 @@ public class PipeliningHttpClient5Requester extends AbstractHttpRequester {
         try {
             var latch = new CountDownLatch(urls.size());
             for (var requestUri : urls) {
+                System.out.printf("Requesting %s%n", requestUri);
                 var request = SimpleRequestBuilder.get().setHttpHost(target).setPath(requestUri.getPath()).build();
 
                 endpoint.execute(SimpleRequestProducer.create(request), SimpleResponseConsumer.create(), new FutureCallback<>() {

@@ -31,6 +31,7 @@ public class ThreadPoolSimpleHttpClientRequester extends AbstractHttpRequester {
     protected void doRequest(List<URI> urls, Blackhole blackhole, Recorder recorder) {
         CompletableFuture<?>[] futures = urls.stream()
             .map(uri -> {
+                System.out.printf("Requesting %s%n", uri);
                 HttpGet httpGet = new HttpGet(uri);
                 httpGet.addHeader(HttpHeaders.ACCEPT, "*/*");
                 return httpGet;
@@ -42,7 +43,6 @@ public class ThreadPoolSimpleHttpClientRequester extends AbstractHttpRequester {
                             String uri = httpGet.getRequestLine().getUri();
                             int statusCode = statusLine.getStatusCode();
                             if (statusCode == 200) {
-                                System.out.println("GET " + uri + " + " + statusLine);
                                 IOUtils.copyLarge(response.getEntity().getContent(), NullOutputStream.nullOutputStream(), ThreadLocalBuffer.getBuffer());
                                 return response.getEntity().getContentLength();
                             } else {

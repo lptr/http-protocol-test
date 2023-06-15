@@ -30,6 +30,7 @@ public class AsyncHttpClient4Requester extends AbstractHttpRequester {
     protected void doRequest(List<URI> urls, Blackhole blackhole, Recorder recorder) throws Exception {
         CountDownLatch counter = new CountDownLatch(urls.size());
         urls.forEach(uri -> {
+            System.out.printf("Requesting %s%n", uri);
             HttpGet httpGet = new HttpGet(uri);
             httpGet.addHeader(HttpHeaders.ACCEPT, "*/*");
             httpClient.execute(httpGet, new FutureCallback<>() {
@@ -38,7 +39,6 @@ public class AsyncHttpClient4Requester extends AbstractHttpRequester {
                     System.out.println(uri.getPath());
                     try {
                         IOUtils.copyLarge(response.getEntity().getContent(), NullOutputStream.nullOutputStream(), ThreadLocalBuffer.getBuffer());
-                        System.out.printf("Received %s on thread %s%n", uri.getPath(), Thread.currentThread().getName());
                         recorder.recordReceived(response.getEntity().getContentLength());
                     } catch (IOException ex) {
                         throw new RuntimeException(String.format("Couldn't fetch URL %s", uri), ex);
