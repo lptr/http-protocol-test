@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -28,16 +29,17 @@ public class ThreadPoolSimpleHttpClientRequester extends AbstractHttpRequester {
     }
 
     @Override
-    protected void doRequest(List<URI> urls, Blackhole blackhole, Recorder recorder) {
-        CompletableFuture<?>[] futures = urls.stream()
+    protected void doRequest(List<URI> urls, Blackhole blackhole, Recorder recorder) throws InterruptedException {
+        CountDownLatch counter = new CountDownLatch(urls.size());
+        urls.stream()
             .map(uri -> {
-                System.out.printf("Requesting %s%n", uri);
                 HttpGet httpGet = new HttpGet(uri);
                 httpGet.addHeader(HttpHeaders.ACCEPT, "*/*");
                 return httpGet;
             })
-            .map(httpGet ->
+            .forEach(httpGet ->
                 CompletableFuture.supplyAsync(() -> {
+                        System.out.printf("Requesting %s%n", httpGet.getRequestLine().getUri());
                         try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
                             StatusLine statusLine = response.getStatusLine();
                             String uri = httpGet.getRequestLine().getUri();
@@ -50,12 +52,13 @@ public class ThreadPoolSimpleHttpClientRequester extends AbstractHttpRequester {
                             }
                         } catch (IOException e) {
                             throw new RuntimeException(e);
+                        } finally {
+                            counter.countDown();
                         }
                     }, executor)
                     .thenAccept(recorder::recordReceived)
-            )
-            .toArray(CompletableFuture[]::new);
-        CompletableFuture.allOf(futures).join();
+            );
+        counter.await();
     }
 
     @Override
