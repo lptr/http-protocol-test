@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Future;
+import java.util.concurrent.CountDownLatch;
 
 public class PipeliningHttpClient4Requester extends AbstractHttpRequester {
     private final CloseableHttpPipeliningClient httpClient;
@@ -43,6 +43,7 @@ public class PipeliningHttpClient4Requester extends AbstractHttpRequester {
     protected void doRequest(List<URI> urls, Blackhole blackhole, Recorder recorder) throws Exception {
         List<HttpAsyncRequestProducer> requestProducers = new ArrayList<>();
         List<HttpAsyncResponseConsumer<Long>> responseConsumers = new ArrayList<>();
+        CountDownLatch counter = new CountDownLatch(urls.size());
         for (URI uri : urls) {
             HttpGet httpGet = new HttpGet(uri);
             httpGet.addHeader(HttpHeaders.ACCEPT, "*/*");
@@ -53,11 +54,11 @@ public class PipeliningHttpClient4Requester extends AbstractHttpRequester {
                     return super.generateRequest();
                 }
             });
-            responseConsumers.add(new CountingAsyncResponseConsumer());
+            responseConsumers.add(new CountingAsyncResponseConsumer(counter, recorder));
         }
 
-        Future<List<Long>> execute = httpClient.execute(httpHost, requestProducers, responseConsumers, null);
-        execute.get().forEach(recorder::recordReceived);
+        httpClient.execute(httpHost, requestProducers, responseConsumers, null);
+        counter.await();
     }
 
     @Override
@@ -68,12 +69,16 @@ public class PipeliningHttpClient4Requester extends AbstractHttpRequester {
     private static class CountingAsyncResponseConsumer extends AbstractAsyncResponseConsumer<Long> {
 
         private static final int MAX_INITIAL_BUFFER_SIZE = 256 * 1024;
+        private final CountDownLatch counter;
+        private final Recorder recorder;
 
         private volatile HttpResponse response;
         private volatile SimpleInputBuffer buf;
 
-        public CountingAsyncResponseConsumer() {
+        public CountingAsyncResponseConsumer(CountDownLatch counter, Recorder recorder) {
             super();
+            this.counter = counter;
+            this.recorder = recorder;
         }
 
         @Override
@@ -85,6 +90,7 @@ public class PipeliningHttpClient4Requester extends AbstractHttpRequester {
         protected void onEntityEnclosed(
             final HttpEntity entity, final ContentType contentType) throws IOException {
             long len = entity.getContentLength();
+            recorder.recordReceived(len);
             if (len > Integer.MAX_VALUE) {
                 throw new ContentTooLongException("Entity content is too long: %,d", len);
             }
@@ -107,6 +113,7 @@ public class PipeliningHttpClient4Requester extends AbstractHttpRequester {
         protected void releaseResources() {
             this.response = null;
             this.buf = null;
+            counter.countDown();
         }
 
         @Override
