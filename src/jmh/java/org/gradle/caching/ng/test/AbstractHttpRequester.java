@@ -52,7 +52,7 @@ public abstract class AbstractHttpRequester implements HttpRequester {
         ImmutableList.sortedCopyOf(hashes).forEach(hasher::putUnencodedChars);
         HashCode combinedHash = hasher.hash();
 
-        System.out.printf("Received %d files with %d bytes in total, combined hash: %s%n", totalCount.get(), totalSize.get(), combinedHash);
+        System.out.printf("> %s received %d files with %d bytes in total, combined hash: %s%n", getClass().getSimpleName(), totalCount.get(), totalSize.get(), combinedHash);
     }
 
     protected abstract void doRequest(List<URI> urls, Blackhole blackhole, Recorder recorder) throws Exception;
