@@ -11,7 +11,6 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -21,9 +20,11 @@ public class ThreadPoolSimpleHttpClientRequester extends AbstractHttpRequester {
     private final CloseableHttpClient httpClient;
     private final ExecutorService executor;
 
-    public ThreadPoolSimpleHttpClientRequester() {
-        this.httpClient = HttpClients.createDefault();
-        this.executor = Executors.newFixedThreadPool(24);
+    public ThreadPoolSimpleHttpClientRequester(int threadCount) {
+        this.httpClient = HttpClients.custom()
+            .setMaxConnPerRoute(1024)
+            .build();
+        this.executor = Executors.newFixedThreadPool(threadCount);
     }
 
     @Override
@@ -36,23 +37,23 @@ public class ThreadPoolSimpleHttpClientRequester extends AbstractHttpRequester {
                 return httpGet;
             })
             .forEach(httpGet ->
-                CompletableFuture.runAsync(() -> {
-                        System.out.printf("Requesting %s%n", httpGet.getRequestLine().getUri());
-                        try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
-                            StatusLine statusLine = response.getStatusLine();
-                            String uri = httpGet.getRequestLine().getUri();
-                            int statusCode = statusLine.getStatusCode();
-                            if (statusCode == 200) {
-                                recorder.recordReceived(response.getEntity()::getContent);
-                            } else {
-                                throw new RuntimeException(String.format("Received status code %d for URL %s", statusCode, uri));
-                            }
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        } finally {
-                            counter.countDown();
+                executor.execute(() -> {
+                    System.out.printf("Requesting %s%n", httpGet.getRequestLine().getUri());
+                    try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
+                        StatusLine statusLine = response.getStatusLine();
+                        String uri = httpGet.getRequestLine().getUri();
+                        int statusCode = statusLine.getStatusCode();
+                        if (statusCode == 200) {
+                            recorder.recordReceived(response.getEntity()::getContent);
+                        } else {
+                            throw new RuntimeException(String.format("Received status code %d for URL %s", statusCode, uri));
                         }
-                    }, executor)
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    } finally {
+                        counter.countDown();
+                    }
+                })
             );
         counter.await();
     }
