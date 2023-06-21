@@ -62,7 +62,7 @@ public abstract class ThreadPoolSimpleHttpClientRequester extends AbstractHttpRe
 
     @Override
     protected void doRequest(List<URI> urls, Blackhole blackhole, Recorder recorder) throws InterruptedException {
-        System.out.printf(">>> Running with thread pooling HTTP connector, threads: %d, max connections: %d%n",
+        logger.info("Running with thread pooling HTTP connector, threads: {}, max connections: {}",
             threadCount, maxConn);
         CountDownLatch counter = new CountDownLatch(urls.size());
         urls.stream()
@@ -73,7 +73,7 @@ public abstract class ThreadPoolSimpleHttpClientRequester extends AbstractHttpRe
             })
             .forEach(httpGet ->
                 executor.execute(() -> {
-                    System.out.printf("Requesting %s%n", httpGet.getRequestLine().getUri());
+                    logger.debug("Requesting {}", httpGet.getRequestLine().getUri());
                     try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
                         StatusLine statusLine = response.getStatusLine();
                         String uri = httpGet.getRequestLine().getUri();

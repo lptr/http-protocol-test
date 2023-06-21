@@ -64,7 +64,7 @@ public class PipeliningHttpClient4Requester extends AbstractHttpRequester {
             requestProducers.add(new BasicAsyncRequestProducer(httpHost, httpGet) {
                 @Override
                 public HttpRequest generateRequest() {
-                    System.out.printf("Requesting %s%n", uri);
+                    logger.debug("Requesting {}", uri);
                     return super.generateRequest();
                 }
             });

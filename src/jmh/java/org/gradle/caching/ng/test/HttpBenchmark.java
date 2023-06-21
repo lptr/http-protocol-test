@@ -17,6 +17,8 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -35,7 +37,10 @@ import java.util.concurrent.TimeUnit;
 public class HttpBenchmark {
 
     public static final URI ROOT_URI = URI.create("https://eu-build-cache.gradle.org/cache/");
-    ImmutableList<URI> cacheUrls;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(HttpBenchmark.class);
+
+    private ImmutableList<URI> cacheUrls;
 
     @Param({
 //        "org.gradle.caching.ng.test.SimpleHttpClientRequester",
@@ -80,14 +85,14 @@ public class HttpBenchmark {
     public static void main(String[] args) throws Exception {
         List<URI> cacheUrls = HttpBenchmark.readCacheUrls();
         Blackhole blackhole = new Blackhole("Today's password is swordfish. I understand instantiating Blackholes directly is dangerous.");
-        try (HttpRequester benchmark = new ThreadPoolSimpleHttpClientRequester.With100Threads()) {
-            System.out.println("Benchmark: " + benchmark.getClass().getSimpleName());
+        try (HttpRequester benchmark = new PipeliningHttpClient5Requester()) {
+            LOGGER.info("Benchmark: {}", benchmark.getClass().getSimpleName());
 
             long start = System.currentTimeMillis();
             benchmark.request(cacheUrls, blackhole);
             long end = System.currentTimeMillis();
 
-            System.out.printf("Benchmark '%s' finished in %f s%n", benchmark.getClass().getSimpleName(), (end - start) / 1000d);
+            LOGGER.info("Benchmark '{}' finished in {} s", benchmark.getClass().getSimpleName(), (end - start) / 1000d);
         }
     }
 }

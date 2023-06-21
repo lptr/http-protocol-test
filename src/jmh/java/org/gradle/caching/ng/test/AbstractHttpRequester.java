@@ -11,6 +11,8 @@ import com.google.common.io.CountingOutputStream;
 import org.apache.commons.io.IOUtils;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.util.NullOutputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -24,6 +26,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 @SuppressWarnings("UnstableApiUsage")
 public abstract class AbstractHttpRequester implements HttpRequester {
+
+    protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     @SuppressWarnings("deprecation")
     private final HashFunction hashFunction = Hashing.md5();
@@ -41,7 +45,8 @@ public abstract class AbstractHttpRequester implements HttpRequester {
                 long bytes = counter.getCount();
                 String hash = hasher.hash().toString();
                 hashes.add(hash);
-                System.out.printf("Received %d bytes with hash %s on thread %s%n", bytes, hash, Thread.currentThread().getName());
+                logger.debug("Received {} bytes with hash {} on thread {}",
+                    bytes, hash, Thread.currentThread().getName());
                 totalCount.incrementAndGet();
                 totalSize.addAndGet(bytes);
             } catch (IOException e) {
@@ -52,7 +57,8 @@ public abstract class AbstractHttpRequester implements HttpRequester {
         ImmutableList.sortedCopyOf(hashes).forEach(hasher::putUnencodedChars);
         HashCode combinedHash = hasher.hash();
 
-        System.out.printf("> %s received %d files with %d bytes in total, combined hash: %s%n", getClass().getSimpleName(), totalCount.get(), totalSize.get(), combinedHash);
+        logger.info("Received {} files with {} bytes in total, combined hash: {} ({})",
+            totalCount.get(), totalSize.get(), combinedHash, getClass().getSimpleName());
     }
 
     protected abstract void doRequest(List<URI> urls, Blackhole blackhole, Recorder recorder) throws Exception;
@@ -66,12 +72,13 @@ public abstract class AbstractHttpRequester implements HttpRequester {
     }
 
     protected static class CounterThreadFactory implements ThreadFactory {
+        private static final Logger LOGGER = LoggerFactory.getLogger(CounterThreadFactory.class);
         private final AtomicInteger count = new AtomicInteger(0);
 
         @Override
         public Thread newThread(@Nonnull Runnable r) {
             String name = "Dispatcher " + count.getAndIncrement();
-            System.out.println(">>> Starting thread: " + name);
+            LOGGER.debug("Starting thread: {}", name);
             return new Thread(r, name);
         }
     }

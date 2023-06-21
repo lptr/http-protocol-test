@@ -49,7 +49,7 @@ public class PipeliningHttpClient5Requester extends AbstractHttpRequester {
         try {
             var latch = new CountDownLatch(urls.size());
             for (var requestUri : urls) {
-                System.out.printf("Requesting %s%n", requestUri);
+                logger.debug("Requesting {}", requestUri);
                 var request = SimpleRequestBuilder.get().setHttpHost(target).setPath(requestUri.getPath()).build();
 
                 endpoint.execute(SimpleRequestProducer.create(request), SimpleResponseConsumer.create(), new FutureCallback<>() {
@@ -66,7 +66,7 @@ public class PipeliningHttpClient5Requester extends AbstractHttpRequester {
                     @Override
                     public void failed(final Exception ex) {
                         try {
-                            System.out.println(request + "->" + ex);
+                            logger.error("Failed to get {}", request, ex);
                         } finally {
                             latch.countDown();
                         }
@@ -75,7 +75,7 @@ public class PipeliningHttpClient5Requester extends AbstractHttpRequester {
                     @Override
                     public void cancelled() {
                         try {
-                            System.out.println(request + " cancelled");
+                            logger.error("Request {} cancelled", request);
                         } finally {
                             latch.countDown();
                         }

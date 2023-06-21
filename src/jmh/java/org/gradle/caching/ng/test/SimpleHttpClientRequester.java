@@ -22,7 +22,7 @@ public class SimpleHttpClientRequester extends AbstractHttpRequester {
     @Override
     protected void doRequest(List<URI> urls, Blackhole blackhole, Recorder recorder) throws Exception {
         for (URI uri : urls) {
-            System.out.printf("Requesting %s%n", uri);
+            logger.debug("Requesting {}", uri);
             HttpGet httpGet = new HttpGet(uri);
             httpGet.addHeader(HttpHeaders.ACCEPT, "*/*");
 

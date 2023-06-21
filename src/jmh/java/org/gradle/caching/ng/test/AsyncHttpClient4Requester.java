@@ -28,7 +28,7 @@ public class AsyncHttpClient4Requester extends AbstractHttpRequester {
     protected void doRequest(List<URI> urls, Blackhole blackhole, Recorder recorder) throws Exception {
         CountDownLatch counter = new CountDownLatch(urls.size());
         urls.forEach(uri -> {
-            System.out.printf("Requesting %s%n", uri);
+            logger.debug("Requesting {}", uri);
             HttpGet httpGet = new HttpGet(uri);
             httpGet.addHeader(HttpHeaders.ACCEPT, "*/*");
             httpClient.execute(httpGet, new FutureCallback<>() {
