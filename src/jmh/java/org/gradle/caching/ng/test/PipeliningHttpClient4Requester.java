@@ -37,7 +37,7 @@ public class PipeliningHttpClient4Requester extends AbstractHttpRequester {
     private final CloseableHttpPipeliningClient httpClient;
     private final HttpHost httpHost;
 
-    public PipeliningHttpClient4Requester(URI root) {
+    public PipeliningHttpClient4Requester() {
         try {
             this.httpClient = HttpAsyncClients.createPipelining(
                 new PoolingNHttpClientConnectionManager(
@@ -48,6 +48,8 @@ public class PipeliningHttpClient4Requester extends AbstractHttpRequester {
             throw new RuntimeException(e);
         }
         this.httpClient.start();
+
+        URI root = HttpBenchmark.ROOT_URI;
         this.httpHost = new HttpHost(root.getHost(), root.getPort(), root.getScheme());
     }
 

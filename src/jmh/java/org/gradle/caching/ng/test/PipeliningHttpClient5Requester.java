@@ -26,8 +26,8 @@ public class PipeliningHttpClient5Requester extends AbstractHttpRequester {
     private final HttpHost target;
     private final MinimalHttpAsyncClient httpClient;
 
-    public PipeliningHttpClient5Requester(URI root) {
-        this.target = HttpHost.create(root);
+    public PipeliningHttpClient5Requester() {
+        this.target = HttpHost.create(HttpBenchmark.ROOT_URI);
         this.httpClient = HttpAsyncClients.createMinimal(
             H2Config.DEFAULT,
             Http1Config.DEFAULT,

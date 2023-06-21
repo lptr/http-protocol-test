@@ -16,19 +16,54 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-public class ThreadPoolSimpleHttpClientRequester extends AbstractHttpRequester {
+public abstract class ThreadPoolSimpleHttpClientRequester extends AbstractHttpRequester {
+    private final int threadCount;
     private final CloseableHttpClient httpClient;
     private final ExecutorService executor;
+    private final int maxConn;
 
-    public ThreadPoolSimpleHttpClientRequester(int threadCount) {
+    public static class With16Threads extends ThreadPoolSimpleHttpClientRequester {
+        public With16Threads() {
+            super(16);
+        }
+    }
+
+    public static class With100Threads extends ThreadPoolSimpleHttpClientRequester {
+        public With100Threads() {
+            super(100);
+        }
+    }
+
+    public static class With100ThreadsLimited extends ThreadPoolSimpleHttpClientRequester {
+        public With100ThreadsLimited() {
+            super(100, 4);
+        }
+    }
+
+    public static class With100ThreadsUnlimited extends ThreadPoolSimpleHttpClientRequester {
+        public With100ThreadsUnlimited() {
+            super(100, 1024);
+        }
+    }
+
+    protected ThreadPoolSimpleHttpClientRequester(int threadCount) {
+        this(threadCount, threadCount);
+    }
+
+    protected ThreadPoolSimpleHttpClientRequester(int threadCount, int maxConn) {
+        this.threadCount = threadCount;
+        this.maxConn = maxConn;
         this.httpClient = HttpClients.custom()
-            .setMaxConnPerRoute(1024)
+            .setMaxConnTotal(maxConn)
+            .setMaxConnPerRoute(maxConn)
             .build();
-        this.executor = Executors.newFixedThreadPool(threadCount);
+        this.executor = Executors.newFixedThreadPool(threadCount, new CounterThreadFactory());
     }
 
     @Override
     protected void doRequest(List<URI> urls, Blackhole blackhole, Recorder recorder) throws InterruptedException {
+        System.out.printf(">>> Running with thread pooling HTTP connector, threads: %d, max connections: %d%n",
+            threadCount, maxConn);
         CountDownLatch counter = new CountDownLatch(urls.size());
         urls.stream()
             .map(uri -> {
