@@ -1,7 +1,7 @@
 package org.gradle.caching.ng.test;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableSortedMap;
+import com.google.common.collect.Maps;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -36,7 +37,7 @@ public abstract class AbstractHttpRequester implements HttpRequester {
     public final void request(List<URI> urls, Blackhole blackhole) throws Exception {
         AtomicLong totalCount = new AtomicLong(0);
         AtomicLong totalSize = new AtomicLong(0);
-        List<String> hashes = Lists.newCopyOnWriteArrayList();
+        Map<String, Long> hashes = Maps.newConcurrentMap();
         doRequest(urls, blackhole, opener -> {
             try (InputStream input = opener.get()) {
                 CountingOutputStream counter = new CountingOutputStream(NullOutputStream.nullOutputStream());
@@ -44,7 +45,7 @@ public abstract class AbstractHttpRequester implements HttpRequester {
                 IOUtils.copyLarge(input, hasher, ThreadLocalBuffer.getBuffer());
                 long bytes = counter.getCount();
                 String hash = hasher.hash().toString();
-                hashes.add(hash);
+                hashes.put(hash, bytes);
                 logger.debug("Received {} bytes with hash {} on thread {}",
                     bytes, hash, Thread.currentThread().getName());
                 totalCount.incrementAndGet();
@@ -54,7 +55,10 @@ public abstract class AbstractHttpRequester implements HttpRequester {
             }
         });
         Hasher hasher = hashFunction.newHasher();
-        ImmutableList.sortedCopyOf(hashes).forEach(hasher::putUnencodedChars);
+        ImmutableSortedMap.copyOf(hashes).forEach((hash, size) -> {
+            hasher.putLong(size);
+            hasher.putUnencodedChars(hash);
+        });
         HashCode combinedHash = hasher.hash();
 
         logger.info("Received {} files with {} bytes in total, combined hash: {} ({})",
